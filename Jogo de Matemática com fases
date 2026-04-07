@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Master: Escolha sua Fase</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --primary: #38bdf8;
+            --secondary: #818cf8;
+            --success: #22c55e;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--card);
+            width: 100%;
+            max-width: 700px;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        /* Telas */
+        .screen { display: none; }
+        .active { display: block; }
+
+        h1 { color: var(--primary); margin-bottom: 1rem; }
+        p { color: #94a3b8; }
+
+        /* Menu de Fases */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 2rem;
+        }
+
+        .phase-card {
+            background: #334155;
+            padding: 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .phase-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            background: #475569;
+        }
+
+        .phase-card h3 { margin: 0 0 10px 0; color: var(--primary); }
+
+        /* Jogo */
+        .btn {
+            width: 100%;
+            padding: 15px;
+            margin: 8px 0;
+            background: #334155;
+            border: 2px solid #475569;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .btn:hover:not(:disabled) { background: #475569; }
+        .btn.correct { background: var(--success); border-color: var(--success); }
+        .btn.wrong { background: var(--error); border-color: var(--error); }
+
+        .progress-bar {
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: 0.3s;
+        }
+
+        .question-text { font-size: 1.3rem; margin-bottom: 1.5rem; font-weight: 600; min-height: 3em; }
+
+        @media (max-width: 500px) { .menu-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="screen-menu" class="screen active">
+        <h1>Math Master</h1>
+        <p>Selecione uma fase para começar o desafio:</p>
+        <div class="menu-grid">
+            <div class="phase-card" onclick="startPhase('basica')">
+                <h3>Matemática Básica</h3>
+                <span>20 Perguntas</span>
+            </div>
+            <div class="phase-card" onclick="startPhase('algebra')">
+                <h3>Álgebra & Funções</h3>
+                <span>15 Perguntas</span>
+            </div>
+            <div class="phase-card" onclick="startPhase('geometria')">
+                <h3>Geometria & Trig.</h3>
+                <span>15 Perguntas</span>
+            </div>
+            <div class="phase-card" onclick="startPhase('avancado')">
+                <h3>Nível Ninja</h3>
+                <span>20 Perguntas</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-game" class="screen">
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8;">
+            <span id="phase-title">Fase</span>
+            <span id="question-count">1/10</span>
+        </div>
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+        <div class="question-text" id="q-text">Aguardando pergunta...</div>
+        <div id="options-box"></div>
+    </div>
+
+    <div id="screen-result" class="screen">
+        <h2 id="result-status">Fim da Fase!</h2>
+        <div style="font-size: 3rem; font-weight: bold; margin: 20px 0;" id="final-score">0/0</div>
+        <p id="feedback-msg"></p>
+        <button class="btn" style="background: var(--primary); border: none;" onclick="showMenu()">Voltar ao Menu</button>
+    </div>
+</div>
+
+<script>
+    const database = {
+        basica: [
+            { q: "Quanto é 15% de 200?", o: ["20", "30", "40", "15"], a: 1 },
+            { q: "Qual o valor de 7 + 7 ÷ 7 + 7 x 7 - 7?", o: ["0", "43", "50", "49"], a: 2 },
+            { q: "Quanto é 1/4 + 2/4?", o: ["3/4", "3/8", "1/2", "1"], a: 0 },
+            { q: "Se 3 canetas custam R$ 6, quanto custam 10?", o: ["R$ 15", "R$ 18", "R$ 20", "R$ 22"], a: 2 },
+            { q: "A raiz quadrada de 169 é:", o: ["11", "12", "13", "14"], a: 2 },
+            { q: "Quanto é 2,5 + 3,75?", o: ["5,25", "6,25", "6,00", "5,75"], a: 1 },
+            { q: "O dobro de 15 somado com a metade de 20 é:", o: ["25", "35", "40", "50"], a: 2 },
+            { q: "Qual o MMC de 3 e 4?", o: ["7", "12", "24", "1"], a: 1 },
+            { q: "Um ângulo reto mede:", o: ["45°", "90°", "180°", "360°"], a: 1 },
+            { q: "Quanto é 9 x 8?", o: ["64", "72", "81", "90"], a: 1 },
+            { q: "Quanto é 1000 - 347?", o: ["653", "663", "753", "553"], a: 0 },
+            { q: "Qual o sucessor do dobro de 9?", o: ["18", "19", "20", "17"], a: 1 },
+            { q: "Em 1,5 kg há quantos gramas?", o: ["150g", "1500g", "1050g", "15000g"], a: 1 },
+            { q: "Quanto é 5³ (5 ao cubo)?", o: ["15", "25", "125", "225"], a: 2 },
+            { q: "Qual o resultado de 0,5 x 100?", o: ["5", "50", "500", "0,50"], a: 1 },
+            { q: "A terça parte de 90 é:", o: ["15", "20", "30", "45"], a: 2 },
+            { q: "Quantos minutos há em 3 horas?", o: ["120", "150", "180", "200"], a: 2 },
+            { q: "Qual o valor de x em x + 12 = 30?", o: ["16", "18", "20", "22"], a: 1 },
+            { q: "O que é um número par?", o: ["Termina em 1,3,5", "Termina em 0,2,4,6,8", "Divisível por 3", "Maior que 10"], a: 1 },
+            { q: "Quanto é 88 ÷ 4?", o: ["20", "22", "24", "44"], a: 1 }
+        ],
+        algebra: [
+            { q: "Resolva: 2x + 5 = 17", o: ["x=4", "x=6", "x=8", "x=12"], a: 1 },
+            { q: "Qual o valor de log de 100 na base 10?", o: ["1", "2", "10", "100"], a: 1 },
+            { q: "Simplifique: (x²)³", o: ["x⁵", "x⁶", "2x²", "3x²"], a: 1 },
+            { q: "Qual a solução de x² - 25 = 0?", o: ["5", "-5", "5 e -5", "Não existe"], a: 2 },
+            { q: "Se f(x) = 3x - 2, quanto é f(4)?", o: ["10", "12", "14", "8"], a: 0 },
+            { q: "O que é uma equação do 2º grau?", o: ["Maior expoente é 1", "Maior expoente é 2", "Não tem incógnita", "Tem 3 variáveis"], a: 1 },
+            { q: "Resolva: 5(x - 2) = 20", o: ["2", "4", "6", "8"], a: 2 },
+            { q: "Qual o valor de delta (Δ) na equação x² - 5x + 6 = 0?", o: ["1", "5", "25", "12"], a: 0 },
+            { q: "Qual o produto das raízes da equação x² - 7x + 10 = 0?", o: ["7", "10", "-7", "-10"], a: 1 },
+            { q: "Se 2^x = 32, então x vale:", o: ["4", "5", "6", "16"], a: 1 },
+            { q: "Qual a inclinação da reta y = 2x + 3?", o: ["2", "3", "-2", "0"], a: 0 },
+            { q: "A função f(x) = -x² + 4 tem concavidade voltada para:", o: ["Cima", "Baixo", "Direita", "Esquerda"], a: 1 },
+            { q: "Quanto é (a + b)²?", o: ["a² + b²", "a² + 2ab + b²", "a + b", "2a + 2b"], a: 1 },
+            { q: "Qual o valor de x na proporção 2/3 = x/9?", o: ["4", "5", "6", "7"], a: 2 },
+            { q: "O ponto (0, 5) pertence a qual eixo?", o: ["Eixo X", "Eixo Y", "Origem", "Nenhum"], a: 1 }
+        ],
+        geometria: [
+            { q: "Área de um triângulo com base 10 e altura 8:", o: ["80", "40", "20", "100"], a: 1 },
+            { q: "O teorema de Pitágoras é usado em triângulos:", o: ["Equiláteros", "Retângulos", "Isósceles", "Acutângulos"], a: 1 },
+            { q: "Soma dos ângulos internos de um quadrilátero:", o: ["180°", "270°", "360°", "540°"], a: 2 },
+            { q: "Qual o valor de sen(90°)?", o: ["0", "0.5", "1", "-1"], a: 2 },
+            { q: "Um polígono de 5 lados é um:", o: ["Hexágono", "Heptágono", "Pentágono", "Losango"], a: 2 },
+            { q: "O raio de um círculo é 5. Qual o diâmetro?", o: ["2.5", "5", "10", "25"], a: 2 },
+            { q: "Volume de um paralelepípedo 2x3x4:", o: ["9", "12", "24", "48"], a: 2 },
+            { q: "Qual o perímetro de um quadrado de lado 7?", o: ["14", "28", "49", "35"], a: 1 },
+            { q: "O suplemento de um ângulo de 60° é:", o: ["30°", "90°", "120°", "180°"], a: 2 },
+            { q: "Quantas arestas tem um cubo?", o: ["6", "8", "10", "12"], a: 3 },
+            { q: "Tangente é a razão entre:", o: ["Sen/Cos", "Cos/Sen", "1/Sen", "1/Cos"], a: 0 },
+            { q: "Qual a área de um círculo de raio 1 (em termos de π)?", o: ["π", "2π", "π²", "0.5π"], a: 0 },
+            { q: "Um triângulo com todos os lados iguais é:", o: ["Escaleno", "Isósceles", "Equilátero", "Retângulo"], a: 2 },
+            { q: "Apotema refere-se a qual tipo de figura?", o: ["Triângulo", "Polígono Regular", "Círculo", "Reta"], a: 1 },
+            { q: "Qual a diagonal de um quadrado de lado 1?", o: ["1", "2", "√2", "√3"], a: 2 }
+        ],
+        avancado: [
+            { q: "Qual a derivada de f(x) = x²?", o: ["2", "x", "2x", "x²"], a: 2 },
+            { q: "De quantas formas 3 pessoas podem sentar em 3 cadeiras?", o: ["3", "6", "9", "12"], a: 1 },
+            { q: "Qual a probabilidade de lançar dois dados e a soma ser 12?", o: ["1/6", "1/12", "1/36", "1/24"], a: 2 },
+            { q: "O número 'e' (Euler) vale aproximadamente:", o: ["2.14", "2.71", "3.14", "1.61"], a: 1 },
+            { q: "O que é uma dízima periódica?", o: ["Número inteiro", "Número racional", "Número irracional", "Número primo"], a: 1 },
+            { q: "Qual o 10º termo da sequência de Fibonacci (iniciando 1,1)?", o: ["34", "55", "89", "144"], a: 1 },
+            { q: "Resolva i² na matemática complexa:", o: ["1", "-1", "0", "√-1"], a: 1 },
+            { q: "Qual a média de (10, 20, 30, 40, 50)?", o: ["25", "30", "35", "40"], a: 1 },
+            { q: "Quantos subconjuntos tem um conjunto com 3 elementos?", o: ["3", "6", "8", "9"], a: 2 },
+            { q: "Qual o valor de 5! (cinco fatorial)?", o: ["25", "60", "120", "150"], a: 2 },
+            { q: "Qual a integral de f(x) = 1?", o: ["0", "x", "1", "x²"], a: 1 },
+            { q: "O que diz o Último Teorema de Fermat?", o: ["Relativo a círculos", "Relativo a aⁿ + bⁿ = cⁿ", "Relativo a primos", "Relativo a áreas"], a: 1 },
+            { q: "A série 1 + 1/2 + 1/4 + 1/8... converge para:", o: ["1", "1.5", "2", "Infinito"], a: 2 },
+            { q: "Quantos graus tem um radiano aproximadamente?", o: ["45°", "57°", "60°", "90°"], a: 1 },
+            { q: "Qual o determinante de [[1,2],[3,4]]?", o: ["-2", "2", "10", "0"], a: 0 },
+            { q: "O que é um número transcedente?", o: ["Não é raiz de equação algébrica", "É sempre maior que 1000", "É um número negativo", "É o número zero"], a: 0 },
+            { q: "Qual a variância de um conjunto onde todos os números são iguais?", o: ["1", "O próprio número", "0", "Indefinida"], a: 2 },
+            { q: "Quem provou a Conjectura de Poincaré?", o: ["Newton", "Grigori Perelman", "Gauss", "Euler"], a: 1 },
+            { q: "O que é um número perfeito?", o: ["É divisível por 2", "Igual à soma de seus divisores próprios", "Tem raiz exata", "É um número primo"], a: 1 },
+            { q: "Qual o valor de cos(π)?", o: ["0", "1", "-1", "0.5"], a: 2 }
+        ]
+    };
+
+    let currentQuestions = [];
+    let qIndex = 0;
+    let score = 0;
+    let canClick = true;
+
+    function showMenu() {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('screen-menu').classList.add('active');
+    }
+
+    function startPhase(phase) {
+        currentQuestions = database[phase];
+        qIndex = 0;
+        score = 0;
+        
+        const titles = {
+            basica: "Matemática Básica",
+            algebra: "Álgebra & Funções",
+            geometria: "Geometria & Trigonometria",
+            avancado: "Desafios Avançados (Ninja)"
+        };
+
+        document.getElementById('phase-title').innerText = titles[phase];
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('screen-game').classList.add('active');
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        canClick = true;
+        const q = currentQuestions[qIndex];
+        document.getElementById('question-count').innerText = `${qIndex + 1} / ${currentQuestions.length}`;
+        document.getElementById('progress-fill').style.width = `${((qIndex) / currentQuestions.length) * 100}%`;
+        document.getElementById('q-text').innerText = q.q;
+        
+        const box = document.getElementById('options-box');
+        box.innerHTML = "";
+
+        q.o.forEach((opt, i) => {
+            const b = document.createElement('button');
+            b.className = 'btn';
+            b.innerText = opt;
+            b.onclick = () => check(i, b);
+            box.appendChild(b);
+        });
+    }
+
+    function check(idx, btn) {
+        if(!canClick) return;
+        canClick = false;
+
+        const correct = currentQuestions[qIndex].a;
+        const btns = document.querySelectorAll('.btn');
+
+        if(idx === correct) {
+            btn.classList.add('correct');
+            score++;
+        } else {
+            btn.classList.add('wrong');
+            btns[correct].classList.add('correct');
+        }
+
+        setTimeout(() => {
+            qIndex++;
+            if(qIndex < currentQuestions.length) {
+                loadQuestion();
+            } else {
+                finish();
+            }
+        }, 1200);
+    }
+
+    function finish() {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('screen-result').classList.add('active');
+        document.getElementById('final-score').innerText = `${score} / ${currentQuestions.length}`;
+        
+        const pct = (score / currentQuestions.length) * 100;
+        let msg = "";
+        if(pct === 100) msg = "Perfeito! Você é um mestre!";
+        else if(pct >= 70) msg = "Muito bom! Seu conhecimento é sólido.";
+        else if(pct >= 50) msg = "Passou raspando! Vale a pena revisar.";
+        else msg = "Opa... melhor estudar um pouco mais esse tema.";
+        
+        document.getElementById('feedback-msg').innerText = msg;
+    }
+</script>
+
+</body>
+</html>
